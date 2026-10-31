@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CareRound realtime test</title>
+  <!-- stomp.js pinned; dev tool only -->
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 1rem; max-width: 60rem; }
+    label { display: block; margin: .5rem 0 .2rem; font-weight: 600; }
+    input, textarea { width: 100%; box-sizing: border-box; font: 13px ui-monospace, monospace; padding: .35rem; }
+    button { margin: .6rem .4rem 0 0; padding: .4rem .9rem; }
+    #log { white-space: pre-wrap; background: #f4f4f4; border: 1px solid #ccc; padding: .5rem; height: 22rem; overflow: auto; font: 12px ui-monospace, monospace; }
+    .err { color: #b00020; } .msg { color: #0b5d1e; }
+  </style>
+</head>
+<body>
+  <h1>CareRound realtime test</h1>
+  <p>Paste an access token (POST /api/v1/auth/login on auth-service, field <code>accessToken</code>). It is sent only in the
+     STOMP CONNECT frame to the URL below and is not stored.</p>
+
+  <label for="url">WebSocket URL</label>
+  <input id="url" value="ws://localhost:8088/ws">
+  <label for="token">Access token</label>
+  <textarea id="token" rows="3" placeholder="eyJ..."></textarea>
+  <label for="dest">Destination</label>
+  <input id="dest" value="/topic/wards/" placeholder="/topic/wards/{wardPublicId} or /topic/admin/alerts">
+
+  <button id="connect">Connect</button>
+  <button id="subscribe" disabled>Subscribe</button>
+  <button id="disconnect" disabled>Disconnect</button>
+
+  <label>Log</label>
+  <div id="log" aria-live="polite"></div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const log = (text, cls) => {
+      const line = document.createElement('div');
+      line.textContent = new Date().toLocaleTimeString() + '  ' + text;
+      if (cls) line.className = cls;
+      $('log').prepend(line);
+    };
+    let client = null;
+
+    $('connect').onclick = () => {
+      const token = $('token').value.trim();
+      client = new StompJs.Client({
+        brokerURL: $('url').value.trim(),
+        connectHeaders: token ? { Authorization: 'Bearer ' + token } : {},
+        reconnectDelay: 0,
+        onConnect: () => { log('CONNECTED'); $('subscribe').disabled = false; $('disconnect').disabled = false; },
+        onStompError: f => log('ERROR frame: ' + f.headers.message, 'err'),
+        onWebSocketClose: e => { log('socket closed (code ' + e.code + ')'); $('subscribe').disabled = true; $('disconnect').disabled = true; },
+      });
+      client.activate();
+      log('connecting to ' + $('url').value.trim() + (token ? '' : ' without a token'));
+    };
+
+    $('subscribe').onclick = () => {
+      const dest = $('dest').value.trim();
+      client.subscribe(dest, m => log('MESSAGE ' + dest + '\n' + JSON.stringify(JSON.parse(m.body), null, 2), 'msg'));
+      log('SUBSCRIBE ' + dest);
+    };
+
+    $('disconnect').onclick = () => client && client.deactivate();
+  </script>
+</body>
+</html>
