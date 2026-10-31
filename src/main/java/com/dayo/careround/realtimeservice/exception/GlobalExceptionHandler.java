@@ -1,5 +1,6 @@
 package com.dayo.careround.realtimeservice.exception;
 
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -65,6 +66,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
         return buildResponse(HttpStatus.FORBIDDEN, "You do not have permission to perform this action");
+    }
+
+    // A path no controller maps (e.g. GET /api/v1/x/ with no id) reaches the static-resource handler, which
+    // throws this since Spring Framework 6.1. It is a client mistake: 404, not the generic 500 below.
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResource(NoResourceFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, "No endpoint " + ex.getHttpMethod() + " /" + ex.getResourcePath());
     }
 
     @ExceptionHandler(Exception.class)
