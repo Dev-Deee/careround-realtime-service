@@ -12,7 +12,8 @@ recover it from notification-service's replay endpoint.
 
 ## Run
 
-Needs `careround-redis` (root `docker-compose.yml`) and a `.env` with `JWT_PUBLIC_KEY` (same value as the other services).
+Needs `careround-redis` (root `docker-compose.yml`) and a `.env` with `JWT_PUBLIC_KEY` (same value as the other services;
+copy `.env.example` to `.env`).
 
 ```bash
 ./mvnw clean package -DskipTests && java -jar target/careround-realtime-service-0.0.1-SNAPSHOT.jar
