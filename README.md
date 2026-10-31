@@ -26,6 +26,7 @@ A second instance (to see the Redis backplane): add `--server.port=8089`.
 | `app.realtime.redis-channel` | `careround.alerts` | Redis channel to subscribe to |
 | `app.realtime.allowed-origins` | `http://localhost:*` | comma-separated origin patterns for the `/ws` handshake |
 | `app.realtime.session-sweep-ms` | `30000` | how often sessions past their token `exp` are closed |
+| `app.realtime.heartbeat-ms` | `10000` | STOMP heart-beat interval both ways; `0` disables |
 
 ## Connecting
 
@@ -42,6 +43,9 @@ A second instance (to see the Redis backplane): add `--server.port=8089`.
 | anything else, or a malformed ward id | nobody |
 
 - Clients never SEND; any SEND is rejected.
+- **Heart-beats:** the broker offers `heart-beat:10000,10000` (`app.realtime.heartbeat-ms`). Clients should ask for
+  10 s both ways (stomp.js `heartbeatIncoming` / `heartbeatOutgoing: 10000`), so proxies and load balancers see
+  traffic on idle sockets. A client that negotiated heart-beats and then goes silent is closed by the server.
 - Tokens last 15 minutes and a socket can outlive one. Each session's `exp` is recorded at CONNECT; the sweep sends
   `ERROR: Access token expired: refresh the token and reconnect` and closes the socket. Refresh, then reconnect.
 - `assignedWardId` is set at registration (and verified against ward-service). Staff who move ward must log in again.
