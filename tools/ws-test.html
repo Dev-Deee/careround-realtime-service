@@ -50,7 +50,10 @@
         brokerURL: $('url').value.trim(),
         connectHeaders: token ? { Authorization: 'Bearer ' + token } : {},
         reconnectDelay: 0,
-        onConnect: () => { log('CONNECTED'); $('subscribe').disabled = false; $('disconnect').disabled = false; },
+        // Match the server (app.realtime.heartbeat-ms): a heart-beat every 10 s each way keeps proxies from dropping the socket.
+        heartbeatIncoming: 10000,
+        heartbeatOutgoing: 10000,
+        onConnect: f => { log('CONNECTED (heart-beat ' + f.headers['heart-beat'] + ')'); $('subscribe').disabled = false; $('disconnect').disabled = false; },
         onStompError: f => log('ERROR frame: ' + f.headers.message, 'err'),
         onWebSocketClose: e => { log('socket closed (code ' + e.code + ')'); $('subscribe').disabled = true; $('disconnect').disabled = true; },
       });
