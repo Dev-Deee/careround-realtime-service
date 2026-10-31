@@ -68,6 +68,16 @@ Ids only, no names or clinical detail. `wardId` present → `/topic/wards/{wardI
 message that is not JSON, or lacks `kind`, `eventId` or `patientId`, is logged (`Dropping malformed alert message`) and
 dropped. Clients receive exactly the fields above; a field added upstream is not forwarded until `AlertMessage` adds it.
 
+## Errors
+
+Every HTTP error uses the body `{"status", "error", "message", "timestamp"}`.
+
+- A path no endpoint maps (e.g. a collection root with a trailing slash, or a wrong sub-path) → **404**
+  `No endpoint <METHOD> <path>`. A wrong HTTP method on a mapped path → 405, unsupported content type → 415,
+  malformed JSON → 400.
+- STOMP errors are ERROR frames (see Connecting above).
+- Anything unexpected → 500 with a generic message; the exception is logged at ERROR with its stack trace.
+
 ## Test page
 
 `tools/ws-test.html` is a small STOMP client (stomp.js 7.0.0 from jsDelivr). Serve it from localhost so its origin is
