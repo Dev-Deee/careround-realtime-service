@@ -12,6 +12,11 @@ import java.util.UUID;
  * @param alertId  Alert.publicId; null for ALERT_RESOLVED
  * @param eventId  Kafka record key of the source event (Alert.sourceEventId)
  * @param wardId   ward publicId; null when the ward could not be resolved (routed to the admin topic)
+ * @param targetUserId  the one staff member (user id = JWT sub) a targeted alert is for; null for ward alerts.
+ *                      Targeted alerts go only to /topic/users/{targetUserId}.
+ * @param severity      CRITICAL | HIGH | INFO (string, so a new value is forwarded, not dropped); null on older messages
+ * @param requiresAck   whether the alert must be acknowledged; null on older messages
+ * @param taskPublicId  the care task the alert is about; null otherwise
  */
 public record AlertMessage(
         Integer schemaVersion,
@@ -22,5 +27,9 @@ public record AlertMessage(
         UUID wardId,
         UUID patientId,
         Instant occurredAt,
-        UUID acknowledgedBy
+        UUID acknowledgedBy,
+        UUID targetUserId,
+        String severity,
+        Boolean requiresAck,
+        UUID taskPublicId
 ) {}

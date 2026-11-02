@@ -38,8 +38,28 @@ class AlertRedisSubscriberTest {
     @Test
     void nullWardRoutesToAdminTopic() {
         AlertMessage alert = new AlertMessage(1, "ALERT_RAISED", UUID.randomUUID(), "e1", "PATIENT_EMERGENCY_DECLARED",
-                null, UUID.randomUUID(), null, null);
+                null, UUID.randomUUID(), null, null, null, null, null, null);
         assertThat(AlertBroadcastService.destinationFor(alert)).isEqualTo("/topic/admin/alerts");
+    }
+
+    @Test
+    void targetedAlertGoesOnlyToThePersonalTopicAndCarriesTheNewFields() throws Exception {
+        UUID ward = UUID.randomUUID(), doctor = UUID.randomUUID(), task = UUID.randomUUID();
+        subscriber.onMessage(message("""
+                {"schemaVersion":1,"kind":"ALERT_RAISED","alertId":"%s","eventId":"medication-overdue-1:doctor",
+                 "type":"MEDICATION_OVERDUE","wardId":"%s","patientId":"%s","occurredAt":"2026-11-02T10:00:00Z",
+                 "targetUserId":"%s","severity":"CRITICAL","requiresAck":true,"taskPublicId":"%s"}
+                """.formatted(UUID.randomUUID(), ward, UUID.randomUUID(), doctor, task)), null);
+        ArgumentCaptor<AlertMessage> sent = ArgumentCaptor.forClass(AlertMessage.class);
+        verify(broadcast).broadcast(sent.capture());
+        AlertMessage a = sent.getValue();
+        assertThat(AlertBroadcastService.destinationFor(a)).isEqualTo("/topic/users/" + doctor); // not the ward topic
+        assertThat(a.severity()).isEqualTo("CRITICAL");
+        assertThat(a.requiresAck()).isTrue();
+        assertThat(a.taskPublicId()).isEqualTo(task);
+        assertThat(new JacksonConfig().objectMapper().writeValueAsString(a))
+                .contains("\"targetUserId\":\"" + doctor).contains("\"severity\":\"CRITICAL\"")
+                .contains("\"requiresAck\":true").contains("\"taskPublicId\":\"" + task);
     }
 
     @Test
