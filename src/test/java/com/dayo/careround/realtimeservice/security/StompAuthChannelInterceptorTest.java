@@ -158,6 +158,41 @@ class StompAuthChannelInterceptorTest {
     }
 
     @Test
+    void userMaySubscribeToOwnPersonalTopic() {
+        for (String role : List.of("DOCTOR", "NURSE", "ADMIN")) {
+            Object user = connectAs("s1", role, WARD_A);
+            UUID me = ((CareRoundPrincipal) ((JwtAuthenticationToken) user).getPrincipal()).userId();
+            assertThatCode(() -> interceptor.preSend(subscribe("s1", user, "/topic/users/" + me), channel))
+                    .as(role).doesNotThrowAnyException();
+        }
+    }
+
+    @Test
+    void anotherUsersPersonalTopicIsDenied() {
+        Object user = connectAs("s1", "NURSE", WARD_A);
+        assertThatThrownBy(() -> interceptor.preSend(subscribe("s1", user, "/topic/users/" + UUID.randomUUID()), channel))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void adminMayNotSubscribeToSomeoneElsesPersonalTopic() {
+        Object admin = connectAs("s1", "ADMIN", null);
+        assertThatThrownBy(() -> interceptor.preSend(subscribe("s1", admin, "/topic/users/" + UUID.randomUUID()), channel))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void malformedPersonalTopicIsDenied() {
+        Object user = connectAs("s1", "DOCTOR", WARD_A);
+        UUID me = ((CareRoundPrincipal) ((JwtAuthenticationToken) user).getPrincipal()).userId();
+        for (String bad : List.of("/topic/users/not-a-uuid", "/topic/users/1-1-1-1-1", "/topic/users/" + me + "/x",
+                "/topic/users/", "/topic/users")) {
+            assertThatThrownBy(() -> interceptor.preSend(subscribe("s1", user, bad), channel))
+                    .as(bad).isInstanceOf(AccessDeniedException.class);
+        }
+    }
+
+    @Test
     void unknownDestinationIsDenied() {
         Object user = connectAs("s1", "ADMIN", null);
         for (String dest : List.of("/topic/other", "/queue/x", "/user/queue/errors", "/topic/wards")) {

@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
     private static final Pattern WARD_TOPIC = Pattern.compile("^/topic/wards/([^/]+)$");
+    private static final Pattern USER_TOPIC = Pattern.compile("^/topic/users/([^/]+)$");
 
     private final JwtVerificationService jwtVerificationService;
     private final SessionExpiryService sessionExpiryService;
@@ -95,6 +96,16 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             throw deny(principal, destination);
         }
 
+        // Personal topic: only the user it belongs to. No admin exception: admins read other people's alerts
+        // through GET /api/v1/alerts APIs, never the live feed.
+        Matcher user = destination == null ? null : USER_TOPIC.matcher(destination);
+        if (user != null && user.matches()) {
+            UUID target = parseCanonicalUuid(user.group(1));
+            if (target != null && target.equals(principal.userId())) {
+                return;
+            }
+            throw deny(principal, destination);
+        }
         Matcher ward = destination == null ? null : WARD_TOPIC.matcher(destination);
         if (ward == null || !ward.matches()) {
             throw deny(principal, destination);

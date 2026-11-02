@@ -18,12 +18,15 @@ public class AlertBroadcastService {
 
     public static final String WARD_TOPIC_PREFIX = "/topic/wards/";
     public static final String ADMIN_ALERTS_TOPIC = "/topic/admin/alerts";
+    public static final String USER_TOPIC_PREFIX = "/topic/users/";
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
-    // Ward alerts go to that ward's topic; alerts whose ward could not be resolved go to admins.
+    // Targeted alerts go only to their recipient's personal topic. Ward alerts go to that ward's topic; alerts whose
+    // ward could not be resolved go to admins.
     public static String destinationFor(AlertMessage alert) {
+        if (alert.targetUserId() != null) return USER_TOPIC_PREFIX + alert.targetUserId();
         return alert.wardId() != null ? WARD_TOPIC_PREFIX + alert.wardId() : ADMIN_ALERTS_TOPIC;
     }
 

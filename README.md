@@ -40,7 +40,8 @@ A second instance (to see the Redis backplane): add `--server.port=8089`.
 |---|---|
 | `/topic/wards/{wardPublicId}` | DOCTOR/NURSE whose token `assignedWardId` is that ward; ADMIN (logged) |
 | `/topic/admin/alerts` | ADMIN (logged). Alerts whose ward could not be resolved |
-| anything else, or a malformed ward id | nobody |
+| `/topic/users/{userId}` | only the user whose JWT `sub` is `{userId}`. **Not** ADMIN, not anyone else: admins read other people's alerts through the API (`GET /api/v1/alerts/...`), never the live feed |
+| anything else, or a malformed ward/user id | nobody |
 
 - Clients never SEND; any SEND is rejected.
 - **Heart-beats:** the broker offers `heart-beat:10000,10000` (`app.realtime.heartbeat-ms`). Clients should ask for
@@ -61,10 +62,17 @@ A second instance (to see the Redis backplane): add `--server.port=8089`.
   "wardId": "<ward publicId or null>",
   "patientId": "<patient publicId>",
   "occurredAt": "<ISO-8601 instant>",
-  "acknowledgedBy": "<userId or null>" }
+  "acknowledgedBy": "<userId or null>",
+  "targetUserId": "<userId or null>",
+  "severity": "CRITICAL | HIGH | INFO (null on older messages)",
+  "requiresAck": true,
+  "taskPublicId": "<care task publicId or null>" }
 ```
 
-Ids only, no names or clinical detail. `wardId` present → `/topic/wards/{wardId}`; null → `/topic/admin/alerts`. A
+Ids only, no names or clinical detail. `targetUserId` present → **only** `/topic/users/{targetUserId}` (a targeted
+alert never goes to the ward topic); otherwise `wardId` present → `/topic/wards/{wardId}`; null → `/topic/admin/alerts`.
+`type` carries the alert type (`PATIENT_EMERGENCY_DECLARED`, `MEDICATION_OVERDUE`, `TASK_OVERDUE`,
+`MEDICATION_ADMINISTERED`, ...). A
 message that is not JSON, or lacks `kind`, `eventId` or `patientId`, is logged (`Dropping malformed alert message`) and
 dropped. Clients receive exactly the fields above; a field added upstream is not forwarded until `AlertMessage` adds it.
 
